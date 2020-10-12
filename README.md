@@ -1,6 +1,5 @@
-<a href="https://developers.libra.org">
-	<img width="200" src="./.assets/libra.png" alt="Libra Logo" />
-</a>
+# Newnet
+* forked from Violas v0.3.0
 
 ---
 
