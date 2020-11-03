@@ -16,7 +16,7 @@
 //! Private Keys adheres to [HKDF RFC 5869](https://tools.ietf.org/html/rfc5869).
 
 use crate::mnemonic::Mnemonic;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use byteorder::{ByteOrder, LittleEndian};
 use hmac::Hmac;
 use libra_crypto::{
@@ -104,9 +104,20 @@ impl ExtendedPrivKey {
         libra_types::account_address::from_public_key(&self.get_public())
     }
 
+    /// Get private key
+    pub fn get_private_key(&self) -> Ed25519PrivateKey {
+        self.private_key.clone()
+    }
+
     /// Compute the authentication key for this account's public key
     pub fn get_authentication_key(&self) -> AuthenticationKey {
         AuthenticationKey::ed25519(&self.get_public())
+    }
+
+    /// Return the Private Key
+    pub fn get_private(&self) -> Ed25519PrivateKey {
+        let data = lcs::to_bytes(&self.private_key).expect("Unable to serialize keys");
+        lcs::from_bytes(&data).expect("Unable to parse key")
     }
 
     /// Libra specific sign function that is capable of signing an arbitrary
@@ -160,9 +171,12 @@ impl KeyFactory {
         info.extend_from_slice(&le_n);
 
         let hkdf_expand = Hkdf::<Sha3_256>::expand(&self.main(), Some(&info), 32)?;
-        let sk = Ed25519PrivateKey::try_from(hkdf_expand.as_slice())
-            .expect("Unable to convert into private key");
-
+        let sk = Ed25519PrivateKey::try_from(hkdf_expand.as_slice()).map_err(|e| {
+            anyhow!(
+                "Unable to convert hkdf output into private key, met Error:{}",
+                e
+            )
+        })?;
         Ok(ExtendedPrivKey::new(child, sk))
     }
 }
